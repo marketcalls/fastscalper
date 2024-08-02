@@ -1,7 +1,7 @@
 import sys
 import configparser
 import customtkinter as ctk
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 from openalgo.orders import api  # Import the OpenAlgo package
 
 class AppStyles:
@@ -14,6 +14,13 @@ class AppStyles:
     SETTINGS_COLOR = "#2196F3"
 
 class SettingsDialog(ctk.CTkToplevel):
+    EXCHANGES = [
+        "NSE", "NFO", "CDS", "BSE", "BFO", "BCD", "MCX", "NCDEX"
+    ]
+    PRODUCTS = [
+        "CNC", "NRML", "MIS"
+    ]
+
     def __init__(self, parent, title, initial_values):
         super().__init__(parent)
         self.title(title)
@@ -21,30 +28,37 @@ class SettingsDialog(ctk.CTkToplevel):
         self.result = {}
         self.create_widgets()
         self.grab_set()
-        
+
         self.update_idletasks()
         x = parent.winfo_x() + (parent.winfo_width() - self.winfo_width()) // 2
         y = parent.winfo_y() + (parent.winfo_height() - self.winfo_height()) // 2
         self.geometry(f"+{x}+{y}")
-        
+
     def create_widgets(self):
         self.entries = {}
         for i, (key, value) in enumerate(self.initial_values.items()):
-            ctk.CTkLabel(self, text=f"{key.capitalize()}:").grid(row=i, column=0, sticky="e", padx=5, pady=2)
-            entry = ctk.CTkEntry(self, width=120)
-            entry.insert(0, value)
-            entry.grid(row=i, column=1, sticky="we", padx=5, pady=2)
-            self.entries[key] = entry
-        
+            if key in ['exchange', 'product']:
+                ctk.CTkLabel(self, text=f"{key.capitalize()}:").grid(row=i, column=0, sticky="e", padx=5, pady=2)
+                combo = ttk.Combobox(self, values=self.EXCHANGES if key == 'exchange' else self.PRODUCTS, width=30)
+                combo.set(value)
+                combo.grid(row=i, column=1, sticky="we", padx=5, pady=2)
+                self.entries[key] = combo
+            else:
+                ctk.CTkLabel(self, text=f"{key.capitalize()}:").grid(row=i, column=0, sticky="e", padx=5, pady=2)
+                entry = ctk.CTkEntry(self, width=120)
+                entry.insert(0, value)
+                entry.grid(row=i, column=1, sticky="we", padx=5, pady=2)
+                self.entries[key] = entry
+
         button_frame = ctk.CTkFrame(self)
         button_frame.grid(row=len(self.initial_values), column=0, columnspan=2, pady=5)
-        
+
         ctk.CTkButton(button_frame, text="OK", command=self.on_ok, width=60).pack(side="left", padx=2)
         ctk.CTkButton(button_frame, text="Cancel", command=self.on_cancel, width=60).pack(side="left", padx=2)
 
     def on_ok(self):
-        for key, entry in self.entries.items():
-            self.result[key] = entry.get()
+        for key, widget in self.entries.items():
+            self.result[key] = widget.get()
         self.destroy()
 
     def on_cancel(self):
@@ -56,7 +70,6 @@ class TradingApp:
         self.master = master
         master.title("FastScalper")
         master.configure(bg=AppStyles.BG_COLOR)
-        master.geometry("300x100")
 
         self.config = configparser.ConfigParser()
         self.config_file = 'config.ini'
@@ -66,12 +79,17 @@ class TradingApp:
         self.center_window()
 
     def center_window(self):
-        self.master.update_idletasks()
+        self.master.geometry('300x100')  # Set the explicit geometry to ensure correct size
+        self.master.update_idletasks()  # Ensure all tasks are processed
         width = self.master.winfo_width()
         height = self.master.winfo_height()
         x = (self.master.winfo_screenwidth() // 2) - (width // 2)
         y = (self.master.winfo_screenheight() // 2) - (height // 2)
         self.master.geometry('{}x{}+{}+{}'.format(width, height, x, y))
+        self.master.after(100, self.adjust_size)  # Adjust the size after 100ms
+
+    def adjust_size(self):
+        self.master.geometry('300x100')  # Forcefully set the size again
 
     def create_widgets(self):
         main_frame = ctk.CTkFrame(self.master, fg_color=AppStyles.BG_COLOR)
@@ -137,12 +155,12 @@ class TradingApp:
                 quantity=int(quantity),
                 position_size=0  # Replace with your position size
             )
-
+            '''
             if response['status'] == 'success':
                 messagebox.showinfo("Order Status", f"Order placed successfully: {response['orderid']}")
             else:
                 messagebox.showerror("Order Error", f"Order failed: {response['error']}")
-
+            '''
         except Exception as e:
             messagebox.showerror("OpenAlgo Error", str(e))
 
@@ -179,9 +197,12 @@ def launch_trading_app():
         import tkinter as tk
         root = tk.Tk()
         root.withdraw()
-    
+
     ctk.set_appearance_mode("dark")
     ctk.set_default_color_theme("blue")
     root = ctk.CTk()
     app = TradingApp(root)
     root.mainloop()
+
+if __name__ == "__main__":
+    launch_trading_app()

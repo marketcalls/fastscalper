@@ -2,7 +2,7 @@ import os
 import sys
 import multiprocessing
 from flask import Flask, render_template, request
-from trading import launch_trading_app
+from fastscalper import launch_trading_app
 
 app = Flask(__name__)
 
